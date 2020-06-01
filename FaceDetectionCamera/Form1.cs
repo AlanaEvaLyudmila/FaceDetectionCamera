@@ -14,14 +14,25 @@ using Emgu.Util;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System.IO;
+using DarrenLee.Media;
+using System.Threading;
 
 namespace FaceDetectionCamera
 {
     public partial class Form1 : Form
     {
+        int count = 0;
+        Camera mycamera = new Camera();
         public Form1()
         {
             InitializeComponent();
+            GetInfo();
+            mycamera.OnFrameArrived += MyCamera_OnFrameArrived;
+        }
+        private void MyCamera_OnFrameArrived(object source, FrameArrivedEventArgs e)
+        {
+            Image img = e.GetFrame();
+            pic.Image = img;
         }
         FilterInfoCollection filter;
         VideoCaptureDevice device;
@@ -33,7 +44,21 @@ namespace FaceDetectionCamera
             cboDevice.SelectedIndex = 0;
             device = new VideoCaptureDevice();
         }
+        private void GetInfo()
 
+        {
+            var cameraDevices = mycamera.GetCameraSources();
+            var cameraResolutions = mycamera.GetSupportedResolutions();
+            foreach (var r in cameraResolutions)
+            {
+                cmbResults.Items.Add(r);
+            }
+
+        }
+         private void cmbResults_SelectedIndexChanged(object sender, EventArgs e)
+         {
+            mycamera.Start(cmbResults.SelectedIndex);
+         }
         private void btnDetect_Click(object sender, EventArgs e)
         {
             device = new VideoCaptureDevice(filter[cboDevice.SelectedIndex].MonikerString);
@@ -41,6 +66,13 @@ namespace FaceDetectionCamera
             device.Start();
 
         }
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            string filename = Application.StartupPath + @"\" + "image" + count.ToString();
+            mycamera.Capture(filename);
+            count++;
+        }
+       
         static readonly CascadeClassifier cascadeClassifier = new CascadeClassifier("haarcascade_frontalface_alt_tree.xml");
         static readonly CascadeClassifier smileClassifier = new CascadeClassifier("haarcascade_smile.xml");
         private void Device_NewFrame(object sender, NewFrameEventArgs eventArgs)
@@ -77,7 +109,6 @@ namespace FaceDetectionCamera
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (device.IsRunning)
                 device.Stop();
         }
     }
